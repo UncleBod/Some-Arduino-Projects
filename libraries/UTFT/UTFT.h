@@ -166,6 +166,8 @@ class UTFT
 		void setContrast(char c);
 		int  getDisplayXSize();
 		int	 getDisplayYSize();
+		// Moved by NAD
+		void printChar(byte c, int x, int y);
 
 	protected:
 		byte fcolorr,fcolorg,fcolorb;
@@ -185,7 +187,6 @@ class UTFT
 		void setPixel(byte r,byte g,byte b);
 		void drawHLine(int x, int y, int l);
 		void drawVLine(int x, int y, int l);
-		void printChar(byte c, int x, int y);
 		void setXY(word x1, word y1, word x2, word y2);
 		void clrXY();
 		void rotateChar(byte c, int x, int y, int pos, int deg);

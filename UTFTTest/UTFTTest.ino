@@ -28,6 +28,8 @@
 UTFT myGLCD(QD_TFT180C,11,10,9,8,7);
 // Declare which fonts we will be using
 extern uint8_t SmallFont[];
+extern uint8_t BigFont[];
+extern uint8_t SevenSegNumFont[];
 void setup()
 {
   randomSeed(analogRead(0));
@@ -70,7 +72,7 @@ void loop()
   myGLCD.setBackColor(255, 0, 0);
   myGLCD.print("Draw crosshairs", CENTER, 1);
   myGLCD.setColor(0, 0, 255);
-  myGLCD.setBackColor(224, 224, 224);
+  myGLCD.setBackColor(244, 244, 244);
   myGLCD.drawLine(79, 14, 79, 113);
   myGLCD.drawLine(1, 63, 158, 63);
   
@@ -108,8 +110,9 @@ void loop()
 
   delay(2000);
 
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
+//  myGLCD.setColor(224,224,224);
+//  myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
   myGLCD.setColor(0, 0, 255);
   myGLCD.setBackColor(224, 224, 224);
   myGLCD.drawLine(79, 14, 79, 113);
@@ -132,7 +135,7 @@ void loop()
       if ((x==79)||(buf[x-1]==63))
         myGLCD.setColor(0,0,255);
       else
-        myGLCD.setColor(224,224,224);
+        myGLCD.setColor(244,244,244);
       myGLCD.drawPixel(x,buf[x-1]);
     }
     myGLCD.setColor(0,0,255);
@@ -143,9 +146,10 @@ void loop()
 
   delay(2000);
   
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some filled rectangles
   myGLCD.setColor(255, 0, 0);
   myGLCD.fillRect(0, 0, 159, 13);
@@ -177,9 +181,10 @@ void loop()
 
   delay(2000);
   
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some filled, rounded rectangles
 // NAD- Remove
 /*
@@ -249,9 +254,10 @@ void loop()
   
   delay(2000);
 */    
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some lines in a pattern
   myGLCD.setColor(255, 0, 0);
   myGLCD.fillRect(0, 0, 159, 13);
@@ -281,9 +287,10 @@ void loop()
   
   delay(2000);
   
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some random circles
 // NAD - Remove
 /*
@@ -303,9 +310,10 @@ void loop()
 
   delay(2000);
 */  
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some random rectangles
   myGLCD.setColor(255, 0, 0);
   myGLCD.fillRect(0, 0, 159, 13);
@@ -324,9 +332,10 @@ void loop()
 
   delay(2000);
   
-  myGLCD.setColor(224,224,224);
-  myGLCD.fillRect(1,14,158,113);
-
+  //myGLCD.setColor(224,224,224);
+  //myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
+  
 // Draw some random rounded rectangles
 // NAD - Remove
 /*
@@ -373,9 +382,9 @@ void loop()
   myGLCD.setColor(255, 255, 255);
   myGLCD.setBackColor(255, 0, 0);
   myGLCD.print("Draw random point", CENTER, 1); 
-  myGLCD.setColor(244,244,244);
-  myGLCD.fillRect(1,14,158,113);
-
+//  myGLCD.setColor(244,244,244);
+//  myGLCD.fillRect(1,14,158,113);
+  ClearShowArea();
   for (int i=0; i<5000; i++)
   {
     myGLCD.setColor(random(255), random(255), random(255));
@@ -384,6 +393,64 @@ void loop()
 
   delay(2000);
 
+// Test of fonts....
+
+// Small font
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.fillRect(0, 0, 159, 13);
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.setBackColor(255, 0, 0);
+  myGLCD.print("Small Character test", CENTER, 1); 
+
+  ClearShowArea();
+  myGLCD.setBackColor(244, 244, 244);
+  myGLCD.setColor(255, 0, 0);
+  x=0;
+  y=15;
+  for(int i=32;i<127;i++)
+  {
+    myGLCD.printChar(byte(i),x++*8+1,y);
+    if (x>18)
+    {
+      y=y+12;
+      x=0;
+    }
+  }
+  delay(2000);
+
+// Big font
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.fillRect(0, 0, 159, 13);
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.setBackColor(255, 0, 0);
+  myGLCD.print("Big Character test", CENTER, 1); 
+
+  myGLCD.setFont(BigFont);
+  ClearShowArea();
+  myGLCD.setBackColor(244, 244, 244);
+  myGLCD.setColor(255, 0, 0);
+  x=0;
+  y=15;
+  for(int i=32;i<127;i++)
+  {
+    myGLCD.printChar(byte(i),x++*16+1,y);
+    if (x>8)
+    {
+      y=y+16;
+      x=0;
+      if (y+16>113)
+      {
+        y=15;
+        delay(1000);
+        ClearShowArea();
+        myGLCD.setColor(255, 0, 0);
+      }
+    }
+  }
+  myGLCD.setFont(SmallFont);
+  delay(2000);
+  
+  //Game Over!
   myGLCD.fillScr(0, 0, 255);
   myGLCD.setColor(255, 0, 0);
   myGLCD.fillRect(10, 17, 149, 72);
@@ -400,5 +467,11 @@ void loop()
   myGLCD.printNumI(millis(), CENTER, 115);
 
   delay (10000);
+}
+void ClearShowArea()
+{
+  myGLCD.setColor(244,244,244);
+  myGLCD.fillRect(1,14,158,113);
+  
 }
 
