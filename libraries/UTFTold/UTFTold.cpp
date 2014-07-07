@@ -1930,7 +1930,7 @@ void UTFT::setXY(word x1, word y1, word x2, word y2)
 		LCD_Write_COM(0x22);
 		break;
 #endif
-#if !(defined(DISABLE_HX8340B_S) && defined(DISABLE_ST7735) && defined(DISABLE_S1D19122))
+#if !(defined(DISABLE_HX8340B_S) && defined(DISABLE_ST7735) && defined(DISABLE_S1D19122) && defined(DISABLE_S6D02A1))
 	case HX8340B_S:
 	case ST7735:
 	case HX8353:
@@ -2019,6 +2019,7 @@ void UTFT::drawRect(int x1, int y1, int x2, int y2)
 	drawVLine(x2, y1, y2-y1);
 }
 
+#ifndef DISABLE_RoundRect
 void UTFT::drawRoundRect(int x1, int y1, int x2, int y2)
 {
 	int tmp;
@@ -2043,6 +2044,7 @@ void UTFT::drawRoundRect(int x1, int y1, int x2, int y2)
 		drawVLine(x2, y1+2, y2-y1-4);
 	}
 }
+#endif
 
 void UTFT::fillRect(int x1, int y1, int x2, int y2)
 {
@@ -2075,6 +2077,7 @@ void UTFT::fillRect(int x1, int y1, int x2, int y2)
 	}
 }
 
+#ifndef DISABLE_RoundRect
 void UTFT::fillRoundRect(int x1, int y1, int x2, int y2)
 {
 	int tmp;
@@ -2109,7 +2112,9 @@ void UTFT::fillRoundRect(int x1, int y1, int x2, int y2)
 		}
 	}
 }
+#endif
 
+#ifndef DISABLE_Circle
 void UTFT::drawCircle(int x, int y, int radius)
 {
 	int f = 1 - radius;
@@ -2164,6 +2169,7 @@ void UTFT::drawCircle(int x, int y, int radius)
 	clrXY();
 }
 
+
 void UTFT::fillCircle(int x, int y, int radius)
 {
 	cbi(P_CS, B_CS);
@@ -2177,6 +2183,7 @@ void UTFT::fillCircle(int x, int y, int radius)
 	sbi(P_CS, B_CS);
 	clrXY();
 }
+#endif
 
 void UTFT::clrScr()
 {

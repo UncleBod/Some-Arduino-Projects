@@ -20,13 +20,16 @@
 #define DISABLE_HX8340B_8		1
 #define DISABLE_HX8340B_S		1
 #define DISABLE_HX8352A			1
-//#define DISABLE_ST7735			1
+#define DISABLE_ST7735			1
 #define DISABLE_PCF8833			1
 #define DISABLE_S1D19122		1
 #define DISABLE_SSD1963_480		1
 #define DISABLE_SSD1963_800		1
 #define DISABLE_S6D1121		1
+//#define DISABLE_S6D02A1		1
 
 // NAD 2014-07-05
 // Starting to add defines to remove part of the graphic funtions
 // Will hopefully make the code even smaller
+//#define DISABLE_RoundRect		1
+//#define DISABLE_Circle		1

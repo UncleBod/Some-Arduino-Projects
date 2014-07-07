@@ -107,13 +107,6 @@
 #define SERIAL_4PIN		4
 #define SERIAL_5PIN		5
 
-#define DISABLE_ILI9325D
-#define DISABLE_HX8347A
-#define DISABLE_ILI9327
-#define DISABLE_HX8340B_8
-#define DISABLE_HX8340B_S
-#define DISABLE_PCF8833
-#define DISABLE_S1D19122
 
 #if defined(__AVR__)
 	#if defined(ARDUINO) && ARDUINO >= 100
@@ -147,11 +140,7 @@ class UTFT
 		void drawLine(int x1, int y1, int x2, int y2);
 		void fillScr(byte r, byte g, byte b);
 		void drawRect(int x1, int y1, int x2, int y2);
-		void drawRoundRect(int x1, int y1, int x2, int y2);
 		void fillRect(int x1, int y1, int x2, int y2);
-		void fillRoundRect(int x1, int y1, int x2, int y2);
-		void drawCircle(int x, int y, int radius);
-		void fillCircle(int x, int y, int radius);
 		void setColor(byte r, byte g, byte b);
 		void setBackColor(byte r, byte g, byte b);
 		void print(char *st, int x, int y, int deg=0);
@@ -166,6 +155,14 @@ class UTFT
 		void setContrast(char c);
 		int  getDisplayXSize();
 		int	 getDisplayYSize();
+#ifndef DISABLE_RoundRect
+		void drawRoundRect(int x1, int y1, int x2, int y2);
+		void fillRoundRect(int x1, int y1, int x2, int y2);
+#endif
+#ifndef DISABLE_Circle
+		void drawCircle(int x, int y, int radius);
+		void fillCircle(int x, int y, int radius);
+#endif
 		// Moved by NAD
 		void printChar(byte c, int x, int y);
 		_current_font	cfont;

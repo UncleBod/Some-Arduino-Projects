@@ -9,9 +9,10 @@
 //
 // Changes by NAD to minimize the memory needed
 // Will try to remove parts of teh graphicslibrary in a organized way.
+// Using an old version of the library, since my TFT was added to it.
+// Might try to get it to work with the full library later on.
 
-
-#include <UTFT.h>
+#include <UTFTold.h>
 
 
 //for QD_TFT180X SPI LCD Modle
@@ -61,7 +62,7 @@ void loop()
   myGLCD.setColor(255,255,0);
   myGLCD.print("QDtech Co.LTD", LEFT, 114);
   myGLCD.print("(C)2013", RIGHT, 114);
-
+  myGLCD.printNumI(QD_TFT180C,CENTER,114,2,' ');
   myGLCD.setColor(0, 0, 255);
   myGLCD.drawRect(0, 13, 159, 113);
   
@@ -109,7 +110,7 @@ void loop()
   }
 
   delay(2000);
-
+/*
 //  myGLCD.setColor(224,224,224);
 //  myGLCD.fillRect(1,14,158,113);
   ClearShowArea();
@@ -145,7 +146,7 @@ void loop()
   }
 
   delay(2000);
-  
+*/  
   //myGLCD.setColor(224,224,224);
   //myGLCD.fillRect(1,14,158,113);
   ClearShowArea();
@@ -256,7 +257,7 @@ void loop()
 */    
   //myGLCD.setColor(224,224,224);
   //myGLCD.fillRect(1,14,158,113);
-  ClearShowArea();
+/*  ClearShowArea();
   
 // Draw some lines in a pattern
   myGLCD.setColor(255, 0, 0);
@@ -290,7 +291,7 @@ void loop()
   //myGLCD.setColor(224,224,224);
   //myGLCD.fillRect(1,14,158,113);
   ClearShowArea();
-  
+*/  
 // Draw some random circles
 // NAD - Remove
 /*
@@ -355,7 +356,7 @@ void loop()
   }
 
   delay(2000);
-*/
+
  // Draw some random Line
   myGLCD.setColor(255, 0, 0);
   myGLCD.fillRect(0, 0, 159, 13);
@@ -392,64 +393,21 @@ void loop()
   }
 
   delay(2000);
-
+*/
 // Test of fonts....
 
 // Small font
-  myGLCD.setColor(255, 0, 0);
-  myGLCD.fillRect(0, 0, 159, 13);
-  myGLCD.setColor(255, 255, 255);
-  myGLCD.setBackColor(255, 0, 0);
-  myGLCD.print("Small Character test", CENTER, 1); 
-
-  ClearShowArea();
-  myGLCD.setBackColor(244, 244, 244);
-  myGLCD.setColor(255, 0, 0);
-  x=0;
-  y=15;
-  for(int i=32;i<127;i++)
-  {
-    myGLCD.printChar(byte(i),x++*8+1,y);
-    if (x>18)
-    {
-      y=y+12;
-      x=0;
-    }
-  }
+  ShowFont(SmallFont,SmallFont,"Small Character test");
   delay(2000);
 
 // Big font
-  myGLCD.setColor(255, 0, 0);
-  myGLCD.fillRect(0, 0, 159, 13);
-  myGLCD.setColor(255, 255, 255);
-  myGLCD.setBackColor(255, 0, 0);
-  myGLCD.print("Big Character test", CENTER, 1); 
-
-  myGLCD.setFont(BigFont);
-  ClearShowArea();
-  myGLCD.setBackColor(244, 244, 244);
-  myGLCD.setColor(255, 0, 0);
-  x=0;
-  y=15;
-  for(int i=32;i<127;i++)
-  {
-    myGLCD.printChar(byte(i),x++*16+1,y);
-    if (x>8)
-    {
-      y=y+16;
-      x=0;
-      if (y+16>113)
-      {
-        y=15;
-        delay(1000);
-        ClearShowArea();
-        myGLCD.setColor(255, 0, 0);
-      }
-    }
-  }
-  myGLCD.setFont(SmallFont);
+  ShowFont(BigFont,SmallFont,"Big Character Test");
   delay(2000);
   
+// SevenSegNumFont
+  ShowFont(SevenSegNumFont,SmallFont,"Num Character test");
+  delay(2000);
+
   //Game Over!
   myGLCD.fillScr(0, 0, 255);
   myGLCD.setColor(255, 0, 0);
@@ -468,6 +426,8 @@ void loop()
 
   delay (10000);
 }
+
+// Clear the show area
 void ClearShowArea()
 {
   myGLCD.setColor(244,244,244);
@@ -475,3 +435,36 @@ void ClearShowArea()
   
 }
 
+// Show a font
+void ShowFont(uint8_t testFont[], uint8_t defaultFont[], String text)
+{
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.fillRect(0, 0, 159, 13);
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.setBackColor(255, 0, 0);
+  myGLCD.print(text, CENTER, 1); 
+
+  ClearShowArea();
+  myGLCD.setBackColor(244, 244, 244);
+  myGLCD.setColor(255, 0, 0);
+  myGLCD.setFont(testFont);
+  int x=0;
+  int y=15;
+  for(int i=myGLCD.cfont.offset;i<myGLCD.cfont.offset+myGLCD.cfont.numchars;i++)
+  {
+    myGLCD.printChar(byte(i),x++*myGLCD.cfont.x_size+1,y);
+    if (x>int(159/myGLCD.cfont.x_size)-1)
+    {
+      y=y+myGLCD.cfont.y_size;
+      x=0;
+      if (y+myGLCD.cfont.y_size>113)
+      {
+        y=15;
+        delay(1000);
+        ClearShowArea();
+        myGLCD.setColor(255, 0, 0);
+      }
+    }
+  }
+  myGLCD.setFont(defaultFont);
+}
