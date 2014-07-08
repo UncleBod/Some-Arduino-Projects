@@ -79,11 +79,8 @@ void tempUpdate()
   if (chk==DHTLIB_OK)
   {
     tempbuf[myloop]=(byte)DHT11.temperature;
-    myGLCD.printNumI((float)DHT11.temperature,LEFT,60);
     myGLCD.setFont(SevenSegNumFont);
     myGLCD.printNumI((float)DHT11.humidity,RIGHT,24);
-    myGLCD.setFont(SmallFont);
-    myGLCD.printNumI((float)myloop,LEFT,24);
     myloop=(++myloop&DMaxBuf1);
     buffull|=(myloop==0);
     for(int i=0;i<DMaxBuf;i++)
@@ -91,23 +88,18 @@ void tempUpdate()
        temp+=(int)tempbuf[i];
     }
     meanTemp=(float)temp/(float)DMaxBuf;
-    myGLCD.printNumF((float)meanTemp,1,LEFT,36);
-    myGLCD.setFont(SevenSegNumFont);
     if (buffull)
     {
       myGLCD.printNumI((float)meanTemp,80,74);
       decimal=(10*meanTemp-10*int(meanTemp));
       myGLCD.setFont(BigFont);
       myGLCD.printNumI((float)decimal,RIGHT,74);
-      myGLCD.setFont(SmallFont);
-      myGLCD.print("GO ",LEFT,48);
     }
     else
     {
       myGLCD.printNumI((float)DHT11.temperature,80,74);
-      myGLCD.setFont(SmallFont);
-      myGLCD.print("Wait ",LEFT,48);
     }
+    myGLCD.setFont(SmallFont);
   }
 }
 
