@@ -22,34 +22,45 @@ dht11 DHT11;
 
 #define DHT11PIN 6
 
-// Other inits
+// For gliding mean
 #define DMaxBuf 8
 #define DMaxBuf1 7
 int myloop=0;
 byte tempbuf[DMaxBuf];
 boolean buffull=false;
 
+// Magic bits for the EEProm
+#define EEPromVersion 1
+byte EEPromMagicInfo[] = {(byte)'U',(byte)'B',(byte)'W',(byte)'S',(byte)EEPromVersion};
+
+// Setup for min/max temperature and humidity
+byte minDHTTemp = 100;
+byte maxDHTTemp = 0;
+byte minDHTHum = 100;
+byte maxDHTHum = 0;
+
+byte EEminDHTTemp =100;
+byte EEmaxDHTTemp = 0;
+byte EEminDHTHum = 100;
+byte EEmaxDHTHum = 0;
+
 void setup()
 {
-  randomSeed(analogRead(0));
+  byte EEPromInfo[5];
+  int ypos=0;
   
 // Setup the LCD
   myGLCD.InitLCD();
   myGLCD.setFont(SmallFont);
   myGLCD.setBackColor(224, 224, 224);
-  myGLCD.clrScr();
   myGLCD.fillScr(224, 224, 224);
-
   myGLCD.setColor(255, 0, 0);
-
-//  Serial.println("DHT11 TEST PROGRAM ");
-//  Serial.print("LIBRARY VERSION: ");
-//  Serial.println(DHT11::VERSION);
-//  Serial.println();
-  myGLCD.print("DHT11 Test Program",CENTER,0);
-  myGLCD.print("Library version",LEFT,12);
-  myGLCD.print(DHT11LIB_VERSION,RIGHT,12);
-  delay(2000);
+  myGLCD.print("Initiating system",CENTER,ypos);
+  ypos +=12;
+  
+// All setups ready
+  myGLCD.fillScr(224, 224, 224);
+  myGLCD.print("NAD Weather Station",CENTER,0);
 }
 
 
@@ -89,7 +100,7 @@ void tempUpdate()
       myGLCD.setFont(BigFont);
       myGLCD.printNumI((float)decimal,RIGHT,74);
       myGLCD.setFont(SmallFont);
-      myGLCD.print("GO   ",LEFT,48);
+      myGLCD.print("GO ",LEFT,48);
     }
     else
     {
@@ -99,3 +110,4 @@ void tempUpdate()
     }
   }
 }
+
