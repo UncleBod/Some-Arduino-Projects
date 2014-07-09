@@ -31,7 +31,7 @@ byte tempbuf[DMaxBuf];
 boolean buffull=false;
 
 // Magic bits for the EEProm
-#define EEPromVersion 1
+#define EEPromVersion 2
 byte EEPromMagicInfo[] = {(byte)'U',(byte)'B',(byte)'W',(byte)'S',(byte)EEPromVersion};
 
 // Setup for min/max temperature and humidity
@@ -53,6 +53,9 @@ byte EEmaxDHTHumid = 0;
 // Variables needed to read and show temperature values
 float DHTcurrentTemp;
 int DHTcurrentHumid;
+
+// Variables for different display modes
+int curDisplayMode=0, newDisplayMode=0;
 
 void setup()
 {
@@ -88,8 +91,7 @@ void setup()
   
   delay(5000);
 // All setups ready
-  myGLCD.fillScr(224, 224, 224);
-  myGLCD.print("NAD Weather Station",CENTER,0);
+  myClearScreen();
 }
 
 
@@ -97,6 +99,7 @@ void loop()
 {
   DHTUpdate();
   DisplayInfo();
+  newDisplayMode = (curDisplayMode + 1) & 3;
   delay(2000);
 }
 
@@ -176,7 +179,31 @@ void DHTUpdate()
 
 void DisplayInfo()
 {
-  int decimal;
+  if (curDisplayMode != newDisplayMode)
+  {
+    myClearScreen();
+    curDisplayMode = newDisplayMode;
+  }
+  switch(curDisplayMode)
+  {
+    case 0:
+      DispalyCurrent();
+      break;
+    case 1:
+      DisplayMin();
+      break;
+    case 2:
+      DisplayMax();
+      break;
+    case 3:
+      DisplayGraph();
+      break;
+  }
+  
+  
+  
+  
+  /*  int decimal;
   
   // Humidity from DHT
   myGLCD.setFont(SevenSegNumFont);
@@ -196,7 +223,7 @@ void DisplayInfo()
   }
   myGLCD.setFont(SmallFont);
   myGLCD.printNumI((float)minDHTHumid,LEFT,24,4);
-  myGLCD.printNumI((float)maxDHTHumid,LEFT,36,4);
+  myGLCD.printNumI((float)maxDHTHumid,LEFT,36,4);yp
   myGLCD.printNumI((float)EEminDHTHumid,LEFT,48,4);
   myGLCD.printNumI((float)EEmaxDHTHumid,LEFT,60,4);
 
@@ -204,14 +231,59 @@ void DisplayInfo()
   myGLCD.printNumI((float)maxDHTTemp,LEFT,84,4);
   myGLCD.printNumI((float)EEminDHTTemp,LEFT,96,4);
   myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,108,4);
+*/  
+}
+
+// Display current values
+void DispalyCurrent()
+{
+  int decimal;
   
+  myGLCD.print("Current Values",CENTER,12);
+  // Humidity from DHT
+  myGLCD.setFont(SevenSegNumFont);
+  myGLCD.printNumI((float)DHTcurrentHumid,RIGHT,24);
+  
+  // Temperature from DHT
+  if (buffull)
+  {
+    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
+    decimal=(10*DHTcurrentTemp-10*int(DHTcurrentTemp));
+    myGLCD.setFont(BigFont);
+    myGLCD.printNumI((float)decimal,RIGHT,74);
+  }
+  else
+  {
+    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
+  }
+}
+
+// Display min values
+void DisplayMin()
+{
+
+  myGLCD.print("  Min Values  ",CENTER,12);
+}
+
+// Display min values
+void DisplayMax()
+{
+
+  myGLCD.print("  Max Values  ",CENTER,12);
+}
+
+// Display Graph
+void DisplayGraph()
+{
+
+  myGLCD.print("Temp/Hum Graph",CENTER,12);
 }
 
 int initEEProm(int y)
 {
   myGLCD.print("Initiating EEProm",CENTER,y);
   y += 12;
-  for(int i=0; i<4; i++)
+/*  for(int i=0; i<4; i++)
   {
     EEPROM.write(i,EEPromMagicInfo[i]);
   }
@@ -220,6 +292,15 @@ int initEEProm(int y)
   EEPROM.write(EEminDHTTempAdress,EEminDHTTemp);
   EEPROM.write(EEmaxDHTTempAdress,EEmaxDHTTemp);
   EEPROM.write(EEminDHTHumidAdress,EEminDHTHumid);
-  EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);
+  EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);*/
   return y;
 }
+
+// A simple clear screen that prints program name at top
+void myClearScreen()
+{
+  myGLCD.setFont(SmallFont);
+  myGLCD.fillScr(224, 224, 224);
+  myGLCD.print("NAD Weather Station",CENTER,0);
+}
+
