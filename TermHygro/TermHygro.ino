@@ -36,13 +36,18 @@ byte EEPromMagicInfo[] = {(byte)'U',(byte)'B',(byte)'W',(byte)'S',(byte)EEPromVe
 // Setup for min/max temperature and humidity
 byte minDHTTemp = 100;
 byte maxDHTTemp = 0;
-byte minDHTHum = 100;
-byte maxDHTHum = 0;
+byte minDHTHumid = 100;
+byte maxDHTHumid = 0;
 
 byte EEminDHTTemp =100;
 byte EEmaxDHTTemp = 0;
-byte EEminDHTHum = 100;
-byte EEmaxDHTHum = 0;
+byte EEminDHTHumid = 100;
+byte EEmaxDHTHumid = 0;
+#define EEminDHTTempAdress 5
+#define EEmaxDHTTempAdress 6
+#define EEminDHTHumidAdress 7
+#define EEmaxDHTHumidAdress 8
+
 
 // Variables needed to read and show temperature values
 float DHTcurrentTemp;
@@ -106,6 +111,22 @@ void DHTUpdate()
     }
     
     //Setup max/min values
+    if (DHTcurrentTemp < minDHTTemp)
+    {
+      minDHTTemp = (byte)DHTcurrentTemp;
+    }
+    if (DHTcurrentTemp < EEminDHTTemp)
+    {
+      EEminDHTTemp = (byte)DHTcurrentTemp;
+    }
+    if (DHTcurrentTemp > maxDHTTemp)
+    {
+      maxDHTTemp = (byte)DHTcurrentTemp;
+    }
+    if (DHTcurrentTemp < EEmaxDHTTemp)
+    {
+      EEmaxDHTTemp = (byte)DHTcurrentTemp;
+    }
   }
 }
 
@@ -134,4 +155,14 @@ void DisplayInfo()
     myGLCD.printNumI((float)DHTcurrentTemp,80,74);
   }
   myGLCD.setFont(SmallFont);
+  myGLCD.printNumI((float)minDHTHumid,LEFT,24,4);
+  myGLCD.printNumI((float)maxDHTHumid,LEFT,36,4);
+  myGLCD.printNumI((float)EEminDHTHumid,LEFT,48,4);
+  myGLCD.printNumI((float)EEmaxDHTHumid,LEFT,60,4);
+
+  myGLCD.printNumI((float)minDHTTemp,LEFT,72,4);
+  myGLCD.printNumI((float)maxDHTTemp,LEFT,84,4);
+  myGLCD.printNumI((float)EEminDHTTemp,LEFT,96,4);
+  myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,108,4);
+  
 }

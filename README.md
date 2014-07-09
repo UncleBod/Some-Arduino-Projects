@@ -5,4 +5,11 @@ First part will be some test sketches and changes in the used libraries so they 
 
 Hygrometer/Thermometer up and running
 
-Next RTC and more graphics
+Working on storing mx/min values in EEPRom.
+
+ToDo list (not in any order):
+Graphics
+Buttons
+RTC
+SD card
+One more sensor
