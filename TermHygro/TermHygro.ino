@@ -44,6 +44,10 @@ byte EEmaxDHTTemp = 0;
 byte EEminDHTHum = 100;
 byte EEmaxDHTHum = 0;
 
+// Variables needed to read and show temperature values
+float DHTcurrentTemp;
+int DHTcurrentHumid;
+
 void setup()
 {
   byte EEPromInfo[5];
@@ -66,21 +70,25 @@ void setup()
 
 void loop()
 {
-  tempUpdate();
+  DHTUpdate();
+  DisplayInfo();
   delay(2000);
 }
 
-void tempUpdate()
+//
+// Read temp adn humidity, set max and min values if changed
+// 
+void DHTUpdate()
 {
+  int currentTemp;
   int temp=0;
-  int decimal;
   float meanTemp;
   int chk = DHT11.read(DHT11PIN);
   if (chk==DHTLIB_OK)
   {
-    tempbuf[myloop]=(byte)DHT11.temperature;
-    myGLCD.setFont(SevenSegNumFont);
-    myGLCD.printNumI((float)DHT11.humidity,RIGHT,24);
+    currentTemp=(byte)DHT11.temperature;
+    DHTcurrentHumid=(byte)DHT11.humidity;
+    tempbuf[myloop]=currentTemp;
     myloop=(++myloop&DMaxBuf1);
     buffull|=(myloop==0);
     for(int i=0;i<DMaxBuf;i++)
@@ -90,16 +98,40 @@ void tempUpdate()
     meanTemp=(float)temp/(float)DMaxBuf;
     if (buffull)
     {
-      myGLCD.printNumI((float)meanTemp,80,74);
-      decimal=(10*meanTemp-10*int(meanTemp));
-      myGLCD.setFont(BigFont);
-      myGLCD.printNumI((float)decimal,RIGHT,74);
+      DHTcurrentTemp=meanTemp;
     }
     else
     {
-      myGLCD.printNumI((float)DHT11.temperature,80,74);
+      DHTcurrentTemp=(float)currentTemp;
     }
-    myGLCD.setFont(SmallFont);
+    
+    //Setup max/min values
   }
 }
 
+//
+// A first display routine
+//
+
+void DisplayInfo()
+{
+  int decimal;
+  
+  // Humidity from DHT
+  myGLCD.setFont(SevenSegNumFont);
+  myGLCD.printNumI((float)DHTcurrentHumid,RIGHT,24);
+  
+  // Temperature from DHT
+  if (buffull)
+  {
+    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
+    decimal=(10*DHTcurrentTemp-10*int(DHTcurrentTemp));
+    myGLCD.setFont(BigFont);
+    myGLCD.printNumI((float)decimal,RIGHT,74);
+  }
+  else
+  {
+    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
+  }
+  myGLCD.setFont(SmallFont);
+}
