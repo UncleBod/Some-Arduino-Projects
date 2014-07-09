@@ -5,6 +5,7 @@
 
 #include <UTFTold.h>
 #include <dht11.h>
+#include <EEPROM.h>
 
 //
 // Initiate display
@@ -66,7 +67,26 @@ void setup()
   myGLCD.setColor(255, 0, 0);
   myGLCD.print("Initiating system",CENTER,ypos);
   ypos +=12;
+// Check if EEProm is initiated.
+  myGLCD.print("Checking EEProm",CENTER,ypos);
+  ypos += 12;
+  for(int i=0; i<4; i++)
+  {
+    if ((byte)EEPROM.read(i) != EEPromMagicInfo[i])
+    {
+      ypos = initEEProm(ypos);
+      break;
+    }
+  }
+// Read data from EEPRom
+  myGLCD.print("Reading from EEProm",CENTER,ypos);
+  ypos += 12;
+  EEminDHTTemp = EEPROM.read(EEminDHTTempAdress);
+  EEmaxDHTTemp = EEPROM.read(EEmaxDHTTempAdress);
+  EEminDHTHumid = EEPROM.read(EEminDHTHumidAdress);
+  EEmaxDHTHumid = EEPROM.read(EEmaxDHTHumidAdress);
   
+  delay(5000);
 // All setups ready
   myGLCD.fillScr(224, 224, 224);
   myGLCD.print("NAD Weather Station",CENTER,0);
@@ -118,14 +138,34 @@ void DHTUpdate()
     if (DHTcurrentTemp < EEminDHTTemp)
     {
       EEminDHTTemp = (byte)DHTcurrentTemp;
+      EEPROM.write(EEminDHTTempAdress,EEminDHTTemp);
     }
     if (DHTcurrentTemp > maxDHTTemp)
     {
       maxDHTTemp = (byte)DHTcurrentTemp;
     }
-    if (DHTcurrentTemp < EEmaxDHTTemp)
+    if (DHTcurrentTemp > EEmaxDHTTemp)
     {
       EEmaxDHTTemp = (byte)DHTcurrentTemp;
+      EEPROM.write(EEmaxDHTTempAdress,EEmaxDHTTemp);
+    }
+    if (DHTcurrentHumid < minDHTHumid)
+    {
+      minDHTHumid = DHTcurrentHumid;
+    }
+    if (DHTcurrentHumid < EEminDHTHumid)
+    {
+      EEminDHTHumid = (byte)DHTcurrentHumid;
+      EEPROM.write(EEminDHTHumidAdress,EEminDHTHumid);
+    }
+    if (DHTcurrentHumid > maxDHTHumid)
+    {
+      maxDHTHumid = (byte)DHTcurrentHumid;
+    }
+    if (DHTcurrentHumid > EEmaxDHTHumid)
+    {
+      EEmaxDHTHumid = (byte)DHTcurrentHumid;
+      EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);
     }
   }
 }
@@ -165,4 +205,21 @@ void DisplayInfo()
   myGLCD.printNumI((float)EEminDHTTemp,LEFT,96,4);
   myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,108,4);
   
+}
+
+int initEEProm(int y)
+{
+  myGLCD.print("Initiating EEProm",CENTER,y);
+  y += 12;
+  for(int i=0; i<4; i++)
+  {
+    EEPROM.write(i,EEPromMagicInfo[i]);
+  }
+ 
+  // Write DHT max/min information
+  EEPROM.write(EEminDHTTempAdress,EEminDHTTemp);
+  EEPROM.write(EEmaxDHTTempAdress,EEmaxDHTTemp);
+  EEPROM.write(EEminDHTHumidAdress,EEminDHTHumid);
+  EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);
+  return y;
 }
