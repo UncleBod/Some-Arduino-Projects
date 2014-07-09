@@ -10,8 +10,8 @@
 //
 // Initiate display
 //
-
-UTFT myGLCD(QD_TFT180C,11,10,9,8,7);
+// Pins are: MOSI, SCLK, CS, RESET, RS/DC
+UTFT myGLCD(QD_TFT180C,11,13,9,8,7);
 // Fonts
 extern uint8_t SmallFont[];
 extern uint8_t BigFont[];
