@@ -6,12 +6,15 @@
 #include <UTFTold.h>
 #include <dht11.h>
 #include <EEPROM.h>
+// Using Fat16 to minimize the memory used
+#include <Fat16.h>
+//#include <Fat16util.h> // use functions to print strings from flash memory
 
 //
 // Initiate display
 //
 // Pins are: MOSI, SCLK, CS, RESET, RS/DC
-UTFT myGLCD(QD_TFT180C,11,13,9,8,7);
+UTFT myGLCD(QD_TFT180C,4,5,9,8,7);
 // Fonts
 extern uint8_t SmallFont[];
 extern uint8_t BigFont[];
@@ -54,6 +57,12 @@ byte EEmaxDHTHumid = 0;
 float DHTcurrentTemp;
 int DHTcurrentHumid;
 
+// Variables used for SDCard
+SdCard card;
+Fat16 file;
+boolean SDCard;
+
+
 // Variables for different display modes
 int curDisplayMode=0, newDisplayMode=0;
 
@@ -80,6 +89,20 @@ void setup()
       ypos = initEEProm(ypos);
       break;
     }
+  }
+  myGLCD.print("Checking SDCard",CENTER,ypos);
+  ypos += 12;
+  if (!card.init(1))
+  {
+    myGLCD.print("SDCard Doesnt work",CENTER,ypos);
+    ypos += 12;
+    SDCard = false;
+  }
+  else
+  {
+    myGLCD.print("SDCard initiated",CENTER,ypos);
+    ypos += 12;
+    SDCard = true;
   }
 // Read data from EEPRom
   myGLCD.print("Reading from EEProm",CENTER,ypos);
