@@ -26,7 +26,8 @@
 //Param6 instructions:Connect to LCD_Pin RS/DC(it means LCD_Model Pin_RS/DC Connect to Arduino_UNO Pin8 Data)
 //UTFT myGLCD(QD_TFT180C,11,10,9,12,8);   // Remember to change the model parameter to suit your display module!
 // 14,13,12,11?
-UTFT myGLCD(QD_TFT180C,11,10,9,8,7);
+UTFT myGLCD(QD_TFT180C,4,5,9,8,7);
+//UTFT myGLCD(QD_TFT180C,11,10,9,8,7);
 // Declare which fonts we will be using
 extern uint8_t SmallFont[];
 extern uint8_t BigFont[];

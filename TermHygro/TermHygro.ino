@@ -112,7 +112,7 @@ void setup()
   EEminDHTHumid = EEPROM.read(EEminDHTHumidAdress);
   EEmaxDHTHumid = EEPROM.read(EEmaxDHTHumidAdress);
   
-  delay(5000);
+  delay(1000);
 // All setups ready
   myClearScreen();
 }
@@ -222,39 +222,6 @@ void DisplayInfo()
       DisplayGraph();
       break;
   }
-  
-  
-  
-  
-  /*  int decimal;
-  
-  // Humidity from DHT
-  myGLCD.setFont(SevenSegNumFont);
-  myGLCD.printNumI((float)DHTcurrentHumid,RIGHT,24);
-  
-  // Temperature from DHT
-  if (buffull)
-  {
-    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
-    decimal=(10*DHTcurrentTemp-10*int(DHTcurrentTemp));
-    myGLCD.setFont(BigFont);
-    myGLCD.printNumI((float)decimal,RIGHT,74);
-  }
-  else
-  {
-    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
-  }
-  myGLCD.setFont(SmallFont);
-  myGLCD.printNumI((float)minDHTHumid,LEFT,24,4);
-  myGLCD.printNumI((float)maxDHTHumid,LEFT,36,4);yp
-  myGLCD.printNumI((float)EEminDHTHumid,LEFT,48,4);
-  myGLCD.printNumI((float)EEmaxDHTHumid,LEFT,60,4);
-
-  myGLCD.printNumI((float)minDHTTemp,LEFT,72,4);
-  myGLCD.printNumI((float)maxDHTTemp,LEFT,84,4);
-  myGLCD.printNumI((float)EEminDHTTemp,LEFT,96,4);
-  myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,108,4);
-*/  
 }
 
 // Display current values
@@ -285,14 +252,40 @@ void DispalyCurrent()
 void DisplayMin()
 {
 
-  myGLCD.print("  Min Values  ",CENTER,12);
+  myGLCD.print("EE   Min Values  Cur",CENTER,12);
+  myGLCD.setFont(SevenSegNumFont);
+  
+  // Min humidity from DHT
+  myGLCD.printNumI((float)minDHTHumid,RIGHT,24);
+  // Min temperature from DHT
+  myGLCD.printNumI((float)minDHTTemp,RIGHT,74);
+  
+  // Min humidity from EE
+  myGLCD.printNumI((float)EEminDHTHumid,LEFT,24);
+  // Min temperature from EE
+  myGLCD.printNumI((float)EEminDHTTemp,LEFT,74);
+  
+  myGLCD.setFont(BigFont);
 }
 
 // Display min values
 void DisplayMax()
 {
 
-  myGLCD.print("  Max Values  ",CENTER,12);
+  myGLCD.print("EE   Max Values  Cur",CENTER,12);
+  myGLCD.setFont(SevenSegNumFont);
+  
+  // Max humidity from DHT
+  myGLCD.printNumI((float)maxDHTHumid,RIGHT,24);
+  // Max temperature from DHT
+  myGLCD.printNumI((float)maxDHTTemp,RIGHT,74);
+  
+  // Max humidity from EE
+  myGLCD.printNumI((float)EEmaxDHTHumid,LEFT,24);
+  // Max temperature from EE
+  myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,74);
+
+  myGLCD.setFont(BigFont);
 }
 
 // Display Graph
@@ -306,7 +299,7 @@ int initEEProm(int y)
 {
   myGLCD.print("Initiating EEProm",CENTER,y);
   y += 12;
-/*  for(int i=0; i<4; i++)
+  for(int i=0; i<4; i++)
   {
     EEPROM.write(i,EEPromMagicInfo[i]);
   }
@@ -315,7 +308,7 @@ int initEEProm(int y)
   EEPROM.write(EEminDHTTempAdress,EEminDHTTemp);
   EEPROM.write(EEmaxDHTTempAdress,EEmaxDHTTemp);
   EEPROM.write(EEminDHTHumidAdress,EEminDHTHumid);
-  EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);*/
+  EEPROM.write(EEmaxDHTHumidAdress,EEmaxDHTHumid);
   return y;
 }
 
