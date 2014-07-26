@@ -66,17 +66,24 @@ boolean SDCard;
 // Variables for different display modes
 int curDisplayMode=0, newDisplayMode=0;
 
+// Variables for logging
+unsigned long NextLogging, MillisToNextLog;
+int fcount;
+
 void setup()
 {
   byte EEPromInfo[5];
   int ypos=0;
+  // Exprimental - Time in ms between loggings (15 seconds now)
+  //MillisToNextLog = 1000UL*15UL;
+  MillisToNextLog = 1000UL*5UL;
   
 // Setup the LCD
   myGLCD.InitLCD();
   myGLCD.setFont(SmallFont);
   myGLCD.setBackColor(224, 224, 224);
   myGLCD.fillScr(224, 224, 224);
-  myGLCD.setColor(255, 0, 0);
+  myGLCD.setColor(5, 5, 5);
   myGLCD.print("Initiating system",CENTER,ypos);
   ypos +=12;
 // Check if EEProm is initiated.
@@ -92,18 +99,29 @@ void setup()
   }
   myGLCD.print("Checking SDCard",CENTER,ypos);
   ypos += 12;
-  if (!card.init(1))
+  SDCard = false;
+  SDCard = card.init(1);
+  if (SDCard)
   {
+    myGLCD.print("SDCard found",CENTER,ypos);
+    SDCard = Fat16::init(&card);
+  }
+  ypos += 12;
+  if (!SDCard)
+  {
+    myGLCD.setColor(255, 0, 0);
     myGLCD.print("SDCard Doesnt work",CENTER,ypos);
-    ypos += 12;
-    SDCard = false;
+    myGLCD.setColor(5, 5, 5);
+
   }
   else
   {
+    myGLCD.setColor(0, 255, 0);
     myGLCD.print("SDCard initiated",CENTER,ypos);
-    ypos += 12;
-    SDCard = true;
+    myGLCD.setColor(5, 5, 5);
   }
+  ypos += 12;
+
 // Read data from EEPRom
   myGLCD.print("Reading from EEProm",CENTER,ypos);
   ypos += 12;
@@ -115,12 +133,22 @@ void setup()
   delay(1000);
 // All setups ready
   myClearScreen();
+  NextLogging=millis() + MillisToNextLog;
 }
 
 
 void loop()
 {
   DHTUpdate();
+  // check if it is time to write to SD card
+  if (SDCard)
+  {
+    if (millis() > NextLogging)
+    {
+      writeFile();
+      NextLogging += MillisToNextLog;
+    }
+  }
   DisplayInfo();
   newDisplayMode = (curDisplayMode + 1) & 3;
   delay(2000);
@@ -318,5 +346,35 @@ void myClearScreen()
   myGLCD.setFont(SmallFont);
   myGLCD.fillScr(224, 224, 224);
   myGLCD.print("NAD Weather Station",CENTER,0);
+}
+
+void writeFile()
+{
+  char name[] = "APPEND01.TXT";
+  myGLCD.setFont(SmallFont);
+  myGLCD.setColor(255, 5, 5);
+  myGLCD.print("Writing SDCard",CENTER,12);
+  myGLCD.setColor(5, 5, 5);
+  // O_CREAT - create the file if it does not exist
+  // O_APPEND - seek to the end of the file prior to each write
+  // O_WRITE - open for write
+  // if (!file.open(name, O_CREAT | O_APPEND | O_WRITE)) error("open");
+  if (file.open(name, O_CREAT | O_APPEND | O_WRITE))
+  {
+    // print current data
+    file.print(fcount++, DEC);
+    file.print(",");
+    file.print(DHTcurrentHumid, DEC);
+    file.print(",");
+    file.print((int)DHTcurrentTemp, DEC);
+    file.print(",");
+    //file.print(millis());
+    file.println(millis());
+    //if (file.writeError) error("write");
+    //if (!file.close()) error("close");
+    file.sync();
+    file.close();
+  }
+  file.close();
 }
 
