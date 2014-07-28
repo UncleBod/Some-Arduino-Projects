@@ -7,9 +7,11 @@ Hygrometer/Thermometer up and running
 
 Working on storing mx/min values in EEPRom.
 
+SD card installed and it seems I'm getting the hang of it.
+I had some problem with corrupt file earlier, but am working on it.
+
 ToDo list (not in any order):
 Graphics
 Buttons
 RTC
-SD card
 One more sensor

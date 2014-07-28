@@ -3,6 +3,9 @@
 // Using DHT 11 and a display to make a simple thermometer/hygrometer
 //
 
+//Debug
+#define DEBUG
+
 #include <UTFTold.h>
 #include <dht11.h>
 #include <EEPROM.h>
@@ -61,22 +64,26 @@ int DHTcurrentHumid;
 SdCard card;
 Fat16 file;
 boolean SDCard;
+// Debugging variables
+unsigned long maxFile=0;
 
 
 // Variables for different display modes
 int curDisplayMode=0, newDisplayMode=0;
 
 // Variables for logging
-unsigned long NextLogging, MillisToNextLog;
+unsigned long NextLogging;
+// Exprimental - Time in ms between loggings (15 seconds now)
+//MillisToNextLog = 1000UL*15UL;
+const unsigned long PROGMEM MillisToNextLog = 1000UL*5UL;
 int fcount;
+
 
 void setup()
 {
+  Serial.begin(9600);
   byte EEPromInfo[5];
   int ypos=0;
-  // Exprimental - Time in ms between loggings (15 seconds now)
-  //MillisToNextLog = 1000UL*15UL;
-  MillisToNextLog = 1000UL*5UL;
   
 // Setup the LCD
   myGLCD.InitLCD();
@@ -104,6 +111,7 @@ void setup()
   if (SDCard)
   {
     myGLCD.print("SDCard found",CENTER,ypos);
+    Serial.print("\nInitializing SD card...");
     SDCard = Fat16::init(&card);
   }
   ypos += 12;
@@ -350,6 +358,7 @@ void myClearScreen()
 
 void writeFile()
 {
+  boolean returnvalue;
   char name[] = "APPEND01.TXT";
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(255, 5, 5);
@@ -358,9 +367,23 @@ void writeFile()
   // O_CREAT - create the file if it does not exist
   // O_APPEND - seek to the end of the file prior to each write
   // O_WRITE - open for write
-  // if (!file.open(name, O_CREAT | O_APPEND | O_WRITE)) error("open");
+  // if (!file.open(name, O_CREAT | O_APPEND | O_WRITE)) Serial.println("open error");
   if (file.open(name, O_CREAT | O_APPEND | O_WRITE))
   {
+    file.seekEnd();
+    #ifdef DEBUG
+    Serial.print("\nWriting to SD card...");
+    Serial.print(file.curPosition(),DEC);
+    Serial.print("  -  ");
+    Serial.println(file.fileSize(),DEC);
+    if (file.curPosition() != file.fileSize())
+    {
+      file.seekEnd();
+      Serial.print(file.curPosition(),DEC);
+      Serial.print("  -  ");
+      Serial.println(file.fileSize(),DEC);
+    }
+    #endif
     // print current data
     file.print(fcount++, DEC);
     file.print(",");
@@ -368,13 +391,21 @@ void writeFile()
     file.print(",");
     file.print((int)DHTcurrentTemp, DEC);
     file.print(",");
-    //file.print(millis());
+    file.print(file.curPosition(),DEC);
+    file.print(",");
+    file.print(file.fileSize(),DEC);
+    file.print(",");
+    if (file.fileSize() > maxFile) maxFile=file.fileSize();
+    file.print(file.fileSize(),DEC);
+    file.print(",");
     file.println(millis());
-    //if (file.writeError) error("write");
-    //if (!file.close()) error("close");
-    file.sync();
-    file.close();
+    #ifdef DEBUG
+    if (file.writeError) Serial.println("write error");
+    if (!file.close()) Serial.println("close error");
+    #endif
+    returnvalue=file.sync();
+    returnvalue=file.close();
   }
-  file.close();
+  returnvalue=file.close();
 }
 
