@@ -63,7 +63,9 @@ int DHTcurrentHumid;
 // Variables used for SDCard
 SdCard card;
 Fat16 file;
-boolean SDCard;
+boolean SDCard; //Used to indicate if we have a good SDCard installed for the moment
+char fileName[] = "APPEND00.TXT";
+
 // Debugging variables
 unsigned long maxFile=0;
 
@@ -107,12 +109,19 @@ void setup()
   myGLCD.print("Checking SDCard",CENTER,ypos);
   ypos += 12;
   SDCard = false;
+  // 1 below is quarter speed. With only resistors to get the level conversion, better is not possible
   SDCard = card.init(1);
   if (SDCard)
   {
     myGLCD.print("SDCard found",CENTER,ypos);
     Serial.print("\nInitializing SD card...");
-    SDCard = Fat16::init(&card);
+    // Here we will create the correct file and set the filename
+    // The basicidea is: YYMMDDXX.CVS
+    // This will give us 100 files per day, which should be enough, even with some crashes
+    if (Fat16::init(&card))
+      SDCard = getNextFileName();
+    else
+      SDCard=false;
   }
   ypos += 12;
   if (!SDCard)
@@ -329,6 +338,34 @@ void DisplayGraph()
 {
 
   myGLCD.print("Temp/Hum Graph",CENTER,12);
+  int buf[158];
+  int x;
+  int y;
+  myGLCD.setColor(0, 0, 25);
+  myGLCD.setBackColor(224, 224, 224);
+  myGLCD.drawLine(79, 14, 79, 113);
+  myGLCD.drawLine(1, 63, 158, 63);
+
+  x=1;
+  for (int i=1; i<(158*20); i++) 
+  {
+    x++;
+    if (x==159)
+      x=1;
+    if (i>159)
+    {
+      if ((x==79)||(buf[x-1]==63))
+        myGLCD.setColor(0,0,25);
+      else
+        myGLCD.setColor(224,224,224);
+      myGLCD.drawPixel(x,buf[x-1]);
+    }
+    myGLCD.setColor(0,25,25);
+    y=63+(sin(((i*2.5)*3.14)/180)*(40-(i / 100)));
+    myGLCD.drawPixel(x,y);
+    buf[x-1]=y;
+  }
+
 }
 
 int initEEProm(int y)
@@ -356,34 +393,72 @@ void myClearScreen()
   myGLCD.print("NAD Weather Station",CENTER,0);
 }
 
+
+
+
 void writeFile()
 {
   boolean returnvalue;
-  char name[] = "APPEND01.TXT";
   myGLCD.setFont(SmallFont);
   myGLCD.setColor(255, 5, 5);
-  myGLCD.print("Writing SDCard",CENTER,12);
+  myGLCD.print(fileName,CENTER,12);
   myGLCD.setColor(5, 5, 5);
+  
+  
   // O_CREAT - create the file if it does not exist
   // O_APPEND - seek to the end of the file prior to each write
   // O_WRITE - open for write
   // if (!file.open(name, O_CREAT | O_APPEND | O_WRITE)) Serial.println("open error");
-  if (file.open(name, O_CREAT | O_APPEND | O_WRITE))
+  if (file.open(fileName, O_CREAT | O_APPEND | O_WRITE))
   {
-    file.seekEnd();
+    returnvalue=file.seekEnd();
     #ifdef DEBUG
     Serial.print("\nWriting to SD card...");
     Serial.print(file.curPosition(),DEC);
     Serial.print("  -  ");
-    Serial.println(file.fileSize(),DEC);
-    if (file.curPosition() != file.fileSize())
-    {
-      file.seekEnd();
-      Serial.print(file.curPosition(),DEC);
-      Serial.print("  -  ");
-      Serial.println(file.fileSize(),DEC);
-    }
+    Serial.print(file.fileSize(),DEC);
+    Serial.print("  -  ");
+    Serial.println(maxFile,DEC);
     #endif
+    // Are we at end of file? If not, do something!
+    // FAT16write has a simple idea about naming files with numbers
+    // If something goes wrong during write etc the best is probably to close the file and create a new. 
+    // In that way it should be possible to minimise data loss.
+    if (file.curPosition() < maxFile)
+    {
+      returnvalue=file.sync();
+      delay(50);
+      returnvalue=file.close();
+      delay(50);
+      returnvalue=file.open(fileName, O_CREAT | O_APPEND | O_WRITE);
+      delay(50);
+      returnvalue=file.seekEnd();
+      delay(50);
+      if (file.curPosition() < maxFile)
+        SDCard = getNextFileName();
+    #ifdef DEBUG
+      Serial.print(file.curPosition(),DEC);
+      Serial.print("  x  ");
+      Serial.print(file.fileSize(),DEC);
+      Serial.print("  x  ");
+      Serial.println(maxFile,DEC);
+    #endif
+    }
+
+    writeValues();
+    // Check if everything is OK and close the file
+    returnvalue = !(file.writeError);
+    returnvalue &= file.sync();
+    returnvalue &= file.close();
+    // If somethign failed, we get the next filename
+    if (!returnvalue)
+      SDCard = getNextFileName();
+  }
+  returnvalue=file.close();
+}
+
+void writeValues()
+{
     // print current data
     file.print(fcount++, DEC);
     file.print(",");
@@ -396,16 +471,30 @@ void writeFile()
     file.print(file.fileSize(),DEC);
     file.print(",");
     if (file.fileSize() > maxFile) maxFile=file.fileSize();
-    file.print(file.fileSize(),DEC);
+    file.print(maxFile,DEC);
     file.print(",");
     file.println(millis());
-    #ifdef DEBUG
-    if (file.writeError) Serial.println("write error");
-    if (!file.close()) Serial.println("close error");
-    #endif
-    returnvalue=file.sync();
-    returnvalue=file.close();
-  }
-  returnvalue=file.close();
 }
 
+boolean getNextFileName()
+{
+  int i;
+  // Try to open a file until the filename is unused
+  // TODO
+  // If the counter ends, the function should return FALSE
+  for (i = 0; i < 90; i++) {
+    fileName[6] = i/10 + '0';
+    fileName[7] = i%10 + '0';
+    // O_CREAT - create the file if it does not exist
+    // O_EXCL - fail if the file exists
+    // O_WRITE - open for write
+    if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+  }
+  file.close();
+  if (i < 88)
+  {
+    return true;
+  }
+  else
+    return false;
+}
