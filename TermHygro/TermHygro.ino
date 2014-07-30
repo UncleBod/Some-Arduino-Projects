@@ -405,11 +405,10 @@ void writeFile()
   myGLCD.setColor(5, 5, 5);
   
   
-  // O_CREAT - create the file if it does not exist
   // O_APPEND - seek to the end of the file prior to each write
   // O_WRITE - open for write
   // if (!file.open(name, O_CREAT | O_APPEND | O_WRITE)) Serial.println("open error");
-  if (file.open(fileName, O_CREAT | O_APPEND | O_WRITE))
+  if (file.open(fileName, O_APPEND | O_WRITE))
   {
     returnvalue=file.seekEnd();
     #ifdef DEBUG
@@ -430,7 +429,7 @@ void writeFile()
       delay(50);
       returnvalue=file.close();
       delay(50);
-      returnvalue=file.open(fileName, O_CREAT | O_APPEND | O_WRITE);
+      returnvalue=file.open(fileName, O_APPEND | O_WRITE);
       delay(50);
       returnvalue=file.seekEnd();
       delay(50);
@@ -474,6 +473,10 @@ void writeValues()
     file.print(maxFile,DEC);
     file.print(",");
     file.println(millis());
+    file.sync();
+    // Wait 50 ms to give the ststem time to write...
+    delay(50);
+    file.sync();
 }
 
 boolean getNextFileName()
@@ -485,10 +488,14 @@ boolean getNextFileName()
   for (i = 0; i < 90; i++) {
     fileName[6] = i/10 + '0';
     fileName[7] = i%10 + '0';
+    // If we can't open the file read only, we try to create it. If this succeeds, we have our new filename
     // O_CREAT - create the file if it does not exist
     // O_EXCL - fail if the file exists
     // O_WRITE - open for write
-    if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    // if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    if (!file.open(fileName, O_READ))
+      if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    delay(50);
   }
   file.close();
   if (i < 88)
