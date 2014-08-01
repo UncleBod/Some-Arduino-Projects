@@ -494,7 +494,10 @@ boolean getNextFileName()
     // O_WRITE - open for write
     // if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
     if (!file.open(fileName, O_READ))
+    {
+      file.close();
       if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    }
     delay(50);
   }
   file.close();
