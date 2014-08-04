@@ -2,9 +2,12 @@
 // First own try...
 // Using DHT 11 and a display to make a simple thermometer/hygrometer
 //
+// Todo:
+// Handle removed SD Card better (seems it is not indicated)
+
 
 //Debug
-#define DEBUG
+//#define DEBUG
 
 #include <UTFTold.h>
 #include <dht11.h>
@@ -65,6 +68,7 @@ SdCard card;
 Fat16 file;
 boolean SDCard; //Used to indicate if we have a good SDCard installed for the moment
 char fileName[] = "APPEND00.TXT";
+byte lastNameIndex = 0;
 
 // Debugging variables
 unsigned long maxFile=0;
@@ -83,7 +87,9 @@ int fcount;
 
 void setup()
 {
+#ifdef DEBUG
   Serial.begin(9600);
+#endif
   byte EEPromInfo[5];
   int ypos=0;
   
@@ -114,7 +120,9 @@ void setup()
   if (SDCard)
   {
     myGLCD.print("SDCard found",CENTER,ypos);
+#ifdef DEBUG
     Serial.print("\nInitializing SD card...");
+#endif
     // Here we will create the correct file and set the filename
     // The basicidea is: YYMMDDXX.CVS
     // This will give us 100 files per day, which should be enough, even with some crashes
@@ -138,7 +146,9 @@ void setup()
     myGLCD.setColor(5, 5, 5);
   }
   ypos += 12;
-
+  myGLCD.print(fileName,CENTER,ypos);
+  ypos += 12;
+  
 // Read data from EEPRom
   myGLCD.print("Reading from EEProm",CENTER,ypos);
   ypos += 12;
@@ -425,16 +435,18 @@ void writeFile()
     // In that way it should be possible to minimise data loss.
     if (file.curPosition() < maxFile)
     {
+  myGLCD.print("Sync Error!!!!!",CENTER,12);
       returnvalue=file.sync();
       delay(50);
       returnvalue=file.close();
       delay(50);
+      SDCard = getNextFileName();
       returnvalue=file.open(fileName, O_APPEND | O_WRITE);
       delay(50);
       returnvalue=file.seekEnd();
       delay(50);
-      if (file.curPosition() < maxFile)
-        SDCard = getNextFileName();
+      //if (file.curPosition() < maxFile)
+      //  SDCard = getNextFileName();
     #ifdef DEBUG
       Serial.print(file.curPosition(),DEC);
       Serial.print("  x  ");
@@ -446,12 +458,25 @@ void writeFile()
 
     writeValues();
     // Check if everything is OK and close the file
-    returnvalue = !(file.writeError);
-    returnvalue &= file.sync();
-    returnvalue &= file.close();
+    // returnvalue = !(file.writeError);
+    // returnvalue &= file.sync();
+    // returnvalue &= file.close();
     // If somethign failed, we get the next filename
-    if (!returnvalue)
+    if (!file.close())
       SDCard = getNextFileName();
+  }
+  // File failed to open.
+  // Get a new filename for the next time
+  // Todo:
+  // Try to open and write to the new file.
+  else
+  {
+    SDCard = getNextFileName();
+    if (SDCard)
+    {
+     file.open(fileName, O_APPEND | O_WRITE);
+     writeValues();
+    }
   }
   returnvalue=file.close();
 }
@@ -485,7 +510,7 @@ boolean getNextFileName()
   // Try to open a file until the filename is unused
   // TODO
   // If the counter ends, the function should return FALSE
-  for (i = 0; i < 90; i++) {
+  for (i = lastNameIndex + 1; i < 100; i++) {
     fileName[6] = i/10 + '0';
     fileName[7] = i%10 + '0';
     // If we can't open the file read only, we try to create it. If this succeeds, we have our new filename
@@ -493,18 +518,28 @@ boolean getNextFileName()
     // O_EXCL - fail if the file exists
     // O_WRITE - open for write
     // if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    #ifdef DEBUG
+      Serial.print("Trying ");
+      Serial.println(fileName);
+      Serial.print("Open Read ");
+    #endif
     if (!file.open(fileName, O_READ))
     {
+    #ifdef DEBUG
+      Serial.print("Failed");
+    #endif
       file.close();
       if (file.open(fileName, O_CREAT | O_EXCL | O_WRITE)) break;
+    #ifdef DEBUG
+      Serial.print("Open create Failed ");
+    #endif
     }
     delay(50);
   }
   file.close();
-  if (i < 88)
-  {
+  lastNameIndex = i;
+  if (i < 99)
     return true;
-  }
   else
     return false;
 }
