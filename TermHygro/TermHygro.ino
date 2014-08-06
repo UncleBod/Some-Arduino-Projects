@@ -173,7 +173,7 @@ void loop()
     if (millis() > NextLogging)
     {
       writeFile();
-      NextLogging += MillisToNextLog;
+      NextLogging += (unsigned long)MillisToNextLog;
     }
   }
   DisplayInfo();
@@ -445,6 +445,7 @@ void writeFile()
       delay(50);
       returnvalue=file.seekEnd();
       delay(50);
+      maxFile=0;
       //if (file.curPosition() < maxFile)
       //  SDCard = getNextFileName();
     #ifdef DEBUG
