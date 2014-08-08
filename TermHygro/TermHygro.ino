@@ -7,7 +7,7 @@
 
 
 //Debug
-//#define DEBUG
+#define DEBUG
 
 #include <UTFTold.h>
 #include <dht11.h>
@@ -423,6 +423,7 @@ void writeFile()
     returnvalue=file.seekEnd();
     #ifdef DEBUG
     Serial.print("\nWriting to SD card...");
+    Serial.printlfileName);
     Serial.print(file.curPosition(),DEC);
     Serial.print("  -  ");
     Serial.print(file.fileSize(),DEC);
@@ -435,7 +436,7 @@ void writeFile()
     // In that way it should be possible to minimise data loss.
     if (file.curPosition() < maxFile)
     {
-  myGLCD.print("Sync Error!!!!!",CENTER,12);
+      myGLCD.print("Sync Error!!!!!",CENTER,12);
       returnvalue=file.sync();
       delay(50);
       returnvalue=file.close();
@@ -445,7 +446,6 @@ void writeFile()
       delay(50);
       returnvalue=file.seekEnd();
       delay(50);
-      maxFile=0;
       //if (file.curPosition() < maxFile)
       //  SDCard = getNextFileName();
     #ifdef DEBUG
@@ -458,12 +458,22 @@ void writeFile()
     }
 
     writeValues();
+    if (file.writeError)
+    {
+      returnvalue = true;
+    #ifdef DEBUG
+      Serial.print("writeError");
+    #endif
+    }
+    else
+      returnvalue = false;
+
     // Check if everything is OK and close the file
     // returnvalue = !(file.writeError);
     // returnvalue &= file.sync();
     // returnvalue &= file.close();
-    // If somethign failed, we get the next filename
-    if (!file.close())
+    // If something failed, we get the next filename
+    if (!file.close() || returnvalue)
       SDCard = getNextFileName();
   }
   // File failed to open.
@@ -539,6 +549,7 @@ boolean getNextFileName()
   }
   file.close();
   lastNameIndex = i;
+  maxFile=0;
   if (i < 99)
     return true;
   else
