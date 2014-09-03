@@ -3,11 +3,13 @@
 // Using DHT 11 and a display to make a simple thermometer/hygrometer
 //
 // Todo:
-// Handle removed SD Card better (seems it is not indicated)
+// Fat16 library seems to mess up the card when opening/writing.
+// other libraries are too big for me.
+// Need to find out why the problem comes.
 
 
 //Debug
-#define DEBUG
+//#define DEBUG
 
 #include <UTFTold.h>
 #include <dht11.h>
@@ -23,7 +25,7 @@
 UTFT myGLCD(QD_TFT180C,4,5,9,8,7);
 // Fonts
 extern uint8_t SmallFont[];
-extern uint8_t BigFont[];
+//extern uint8_t BigFont[];
 extern uint8_t SevenSegNumFont[];
 
 // DHT11 setup
@@ -80,8 +82,7 @@ int curDisplayMode=0, newDisplayMode=0;
 // Variables for logging
 unsigned long NextLogging;
 // Exprimental - Time in ms between loggings (15 seconds now)
-//MillisToNextLog = 1000UL*15UL;
-const unsigned long PROGMEM MillisToNextLog = 1000UL*5UL;
+const unsigned long PROGMEM MillisToNextLog = 1000UL*15UL;
 int fcount;
 
 
@@ -124,8 +125,8 @@ void setup()
     Serial.print("\nInitializing SD card...");
 #endif
     // Here we will create the correct file and set the filename
-    // The basicidea is: YYMMDDXX.CVS
-    // This will give us 100 files per day, which should be enough, even with some crashes
+    // The basic idea is: YYMMDDXX.CVS (XX = 01-99)
+    // This will give us 99 files per day, which should be enough, even with some crashes
     if (Fat16::init(&card))
       SDCard = getNextFileName();
     else
@@ -294,7 +295,8 @@ void DispalyCurrent()
   {
     myGLCD.printNumI((float)DHTcurrentTemp,80,74);
     decimal=(10*DHTcurrentTemp-10*int(DHTcurrentTemp));
-    myGLCD.setFont(BigFont);
+    //myGLCD.setFont(BigFont);
+    myGLCD.setFont(SmallFont);
     myGLCD.printNumI((float)decimal,RIGHT,74);
   }
   else
@@ -320,7 +322,7 @@ void DisplayMin()
   // Min temperature from EE
   myGLCD.printNumI((float)EEminDHTTemp,LEFT,74);
   
-  myGLCD.setFont(BigFont);
+  myGLCD.setFont(SmallFont);
 }
 
 // Display min values
@@ -340,7 +342,7 @@ void DisplayMax()
   // Max temperature from EE
   myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,74);
 
-  myGLCD.setFont(BigFont);
+  myGLCD.setFont(SmallFont);
 }
 
 // Display Graph
