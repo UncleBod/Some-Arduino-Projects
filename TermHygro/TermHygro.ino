@@ -7,6 +7,8 @@
 // other libraries are too big for me.
 // Need to find out why the problem comes.
 
+// 2014-09-23
+// Start changing for temporary removing SD card and using EErom for logging
 
 //Debug
 //#define DEBUG
@@ -34,6 +36,10 @@ dht11 DHT11;
 
 #define DHT11PIN 6
 
+// For monitoring the Vin
+int sensorValue;
+float vin;
+
 // For gliding mean
 #define DMaxBuf 8
 #define DMaxBuf1 7
@@ -41,6 +47,45 @@ int myloop=0;
 byte tempbuf[DMaxBuf];
 boolean buffull=false;
 
+/*
+EEProm memory map:
+Adr Cont
+00  'U'
+01  'B'
+02  'W'
+03  'S'
+04  Version
+05  min DHT temp
+06  max DHT temp
+07  min DHT humidity
+08  max DHT humidity
+09  min probe 2
+10  max probe 2
+11  min probe 3
+12  max probe 3
+13  logg type and status (round robin or one time) (8 bits?)
+  b0  RR (0 = one time, 1 = round robin)
+  b1  Reboot activity (0 = restart logg, 1 = continue logg)
+  b2  first round (0 = filling first time, 1 = filled at least once)
+  b3
+  b4
+  b5
+  b6
+  b7
+14,15 logg frequence
+16  logg place
+17  
+18
+19
+20
+21
+22
+23
+
+24
+--  Logged data - 4 variables, 250 points each
+1023
+*/
 // Magic bits for the EEProm
 #define EEPromVersion 2
 byte EEPromMagicInfo[] = {(byte)'U',(byte)'B',(byte)'W',(byte)'S',(byte)EEPromVersion};
@@ -60,6 +105,13 @@ byte EEmaxDHTHumid = 0;
 #define EEminDHTHumidAdress 7
 #define EEmaxDHTHumidAdress 8
 
+// EEProm logging variables and constants
+#define EELoggType        1    // RR (0 = one time, 1 = round robin)
+#define EERebootActivity  2    // Reboot activity (0 = restart logg, 1 = continue logg)
+#define EELoggStatus      4    // first round (0 = filling first time, 1 = filled at least once)
+
+byte currLogg;
+
 
 // Variables needed to read and show temperature values
 float DHTcurrentTemp;
@@ -68,7 +120,7 @@ int DHTcurrentHumid;
 // Variables used for SDCard
 SdCard card;
 Fat16 file;
-boolean SDCard; //Used to indicate if we have a good SDCard installed for the moment
+boolean SDCard =false; //Used to indicate if we have a good SDCard installed for the moment
 char fileName[] = "APPEND00.TXT";
 byte lastNameIndex = 0;
 
@@ -93,7 +145,7 @@ void setup()
 #endif
   byte EEPromInfo[5];
   int ypos=0;
-  
+  analogReference(INTERNAL);
 // Setup the LCD
   myGLCD.InitLCD();
   myGLCD.setFont(SmallFont);
@@ -116,40 +168,42 @@ void setup()
   myGLCD.print("Checking SDCard",CENTER,ypos);
   ypos += 12;
   SDCard = false;
-  // 1 below is quarter speed. With only resistors to get the level conversion, better is not possible
-  SDCard = card.init(1);
   if (SDCard)
   {
-    myGLCD.print("SDCard found",CENTER,ypos);
+    // 1 below is quarter speed. With only resistors to get the level conversion, better is not possible
+    SDCard = card.init(1);
+    if (SDCard)
+    {
+      myGLCD.print("SDCard found",CENTER,ypos);
 #ifdef DEBUG
-    Serial.print("\nInitializing SD card...");
+      Serial.print("\nInitializing SD card...");
 #endif
-    // Here we will create the correct file and set the filename
-    // The basic idea is: YYMMDDXX.CVS (XX = 01-99)
-    // This will give us 99 files per day, which should be enough, even with some crashes
-    if (Fat16::init(&card))
-      SDCard = getNextFileName();
-    else
-      SDCard=false;
-  }
-  ypos += 12;
-  if (!SDCard)
-  {
-    myGLCD.setColor(255, 0, 0);
-    myGLCD.print("SDCard Doesnt work",CENTER,ypos);
-    myGLCD.setColor(5, 5, 5);
+      // Here we will create the correct file and set the filename
+      // The basic idea is: YYMMDDXX.CVS (XX = 01-99)
+      // This will give us 99 files per day, which should be enough, even with some crashes
+      if (Fat16::init(&card))
+        SDCard = getNextFileName();
+      else
+        SDCard=false;
+    }
+    ypos += 12;
+    if (!SDCard)
+    {
+      myGLCD.setColor(255, 0, 0);
+      myGLCD.print("SDCard Doesnt work",CENTER,ypos);
+      myGLCD.setColor(5, 5, 5);
 
+    }
+    else
+    {
+      myGLCD.setColor(0, 255, 0);
+      myGLCD.print("SDCard initiated",CENTER,ypos);
+      myGLCD.setColor(5, 5, 5);
+      ypos += 12;
+      myGLCD.print(fileName,CENTER,ypos);
+    }
+    ypos += 12;
   }
-  else
-  {
-    myGLCD.setColor(0, 255, 0);
-    myGLCD.print("SDCard initiated",CENTER,ypos);
-    myGLCD.setColor(5, 5, 5);
-  }
-  ypos += 12;
-  myGLCD.print(fileName,CENTER,ypos);
-  ypos += 12;
-  
 // Read data from EEPRom
   myGLCD.print("Reading from EEProm",CENTER,ypos);
   ypos += 12;
@@ -168,12 +222,16 @@ void setup()
 void loop()
 {
   DHTUpdate();
+  // A7 is 1/11th of the Vin
+  sensorValue = analogRead(A7);            
+  vin=1.1/1024*sensorValue*11.0;
+
   // check if it is time to write to SD card
   if (SDCard)
   {
     if (millis() > NextLogging)
     {
-      writeFile();
+      if (SDCard) writeFile();
       NextLogging += (unsigned long)MillisToNextLog;
     }
   }
@@ -402,7 +460,8 @@ void myClearScreen()
 {
   myGLCD.setFont(SmallFont);
   myGLCD.fillScr(224, 224, 224);
-  myGLCD.print("NAD Weather Station",CENTER,0);
+  //myGLCD.print("NAD Weather Station",CENTER,0);
+  myGLCD.printNumF((float)vin,2,CENTER,0);
 }
 
 
@@ -557,3 +616,14 @@ boolean getNextFileName()
   else
     return false;
 }
+
+// EEProm Log
+// Write value to the next place in the logg
+// Keep track of position and what to do if the position overflows
+//
+// IN
+//
+// returns
+// 0 OK
+// 1 End of logging
+// 2 Write error
