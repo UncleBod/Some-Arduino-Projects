@@ -1,4 +1,4 @@
-//
+// 28482 of 30720 bytes...
 // First own try...
 // Using DHT 11 and a display to make a simple thermometer/hygrometer
 //
@@ -6,12 +6,28 @@
 // Fat16 library seems to mess up the card when opening/writing.
 // other libraries are too big for me.
 // Need to find out why the problem comes.
-
+// 
+// 2014-11-17
+// Update pins for future.
+// Old  New
+// D9 - D5
+// D8 - D8
+// D7 - D7
+// D6 - D9
+// D5 - D3
+// D4 - D4
+// D3 - D4
+// D2 - D3
+// Note New D4 and D3 will have two connections each.
+// D6 will be TFT Backligt (adjustable light)
+// TOCHECK - will TFT and RTC work when both uses the same pin? Pulldown resistors?
+// Binary sketch size: 25 966 bytes (of a 30 720 byte maximum)
+//
 // 2014-09-23
 // Start changing for temporary removing SD card and using EErom for logging
 
 //Debug
-// #define DEBUG
+//#define DEBUG
 
 #include <UTFTold.h>
 #include <dht11.h>
@@ -20,11 +36,15 @@
 #include <Fat16.h>
 //#include <Fat16util.h> // use functions to print strings from flash memory
 
+// OneWire for DS18B20 temp sensor
+#include <OneWire.h>
+
 //
 // Initiate display
 //
 // Pins are: MOSI, SCLK, CS, RESET, RS/DC
-UTFT myGLCD(QD_TFT180C,4,5,9,8,7);
+UTFT myGLCD(QD_TFT180C,4,3,5,8,7);
+// UTFT myGLCD(QD_TFT180C,4,5,9,8,7);
 // Fonts
 extern uint8_t SmallFont[];
 //extern uint8_t BigFont[];
@@ -34,7 +54,12 @@ extern uint8_t SevenSegNumFont[];
 
 dht11 DHT11;
 
-#define DHT11PIN 6
+#define DHT11PIN 9
+//#define DHT11PIN 6
+
+// DS18B20 init
+// DS18S20 Temperature chip i/o
+OneWire ds(1);// on pin 1
 
 // For monitoring the Vin
 int sensorValue;
@@ -138,11 +163,15 @@ const unsigned long PROGMEM MillisToNextLog = 1000UL*15UL;
 int fcount;
 
 // Defines for RTC
+// TODO Most of this should be in a header file.
 // Set your own pins with these defines !
 // A wild cutnpaste from arduino.cc user "Krodal"
-#define DS1302_SCLK_PIN   2 //6    // Arduino pin for the Serial Clock
-#define DS1302_IO_PIN     3 //7    // Arduino pin for the Data I/O
-#define DS1302_CE_PIN     4 //8    // Arduino pin for the Chip Enable
+//
+// TODO 4 is shared pin, have to remake!
+//
+#define DS1302_SCLK_PIN   3 // 2 // Arduino pin for the Serial Clock
+#define DS1302_IO_PIN     4 // 3 // Arduino pin for the Data I/O
+#define DS1302_CE_PIN     2 // 4 // Arduino pin for the Chip Enable
 
 
 // Macros to convert the bcd values of the registers to normal
@@ -285,6 +314,17 @@ void setup()
   myGLCD.setColor(5, 5, 5);
   myGLCD.print("Initiating system",CENTER,ypos);
   ypos +=12;
+  myGLCD.print("Starting RTC",CENTER,ypos);
+  ypos +=12;
+// Setup for RTC
+  // Start by clearing the Write Protect bit
+  // Otherwise the clock data cannot be written
+  // The whole register is written, 
+  // but the WP-bit is the only bit in that register.
+  DS1302_write (DS1302_ENABLE, 0);
+
+  // Disable Trickle Charger.
+  DS1302_write (DS1302_TRICKLE, 0x00);
 // Check if EEProm is initiated.
   myGLCD.print("Checking EEProm",CENTER,ypos);
   ypos += 12;
@@ -343,15 +383,6 @@ void setup()
   EEminDHTHumid = EEPROM.read(EEminDHTHumidAdress);
   EEmaxDHTHumid = EEPROM.read(EEmaxDHTHumidAdress);
   
-// Setup for RTC
-  // Start by clearing the Write Protect bit
-  // Otherwise the clock data cannot be written
-  // The whole register is written, 
-  // but the WP-bit is the only bit in that register.
-  DS1302_write (DS1302_ENABLE, 0);
-
-  // Disable Trickle Charger.
-  DS1302_write (DS1302_TRICKLE, 0x00);
 
   delay(1000);
 // All setups ready
@@ -380,6 +411,68 @@ void loop()
   newDisplayMode = curDisplayMode + 1;
   if (newDisplayMode > 4) newDisplayMode = 0;
   delay(2000);
+
+
+
+// For testing size needed for DS18B20
+  byte i;
+  byte present = 0;
+  byte data[12];
+  byte addr[8];
+
+  if ( !ds.search(addr)) {
+      Serial.print("No more addresses.\n");
+      ds.reset_search();
+      return;
+  }
+
+  Serial.print("R=");
+  for( i = 0; i < 8; i++) {
+    Serial.print(addr[i], HEX);
+    Serial.print(" ");
+  }
+
+  if ( OneWire::crc8( addr, 7) != addr[7]) {
+      Serial.print("CRC is not valid!\n");
+      return;
+  }
+/*
+  if ( addr[0] == 0x10) {
+      Serial.print("Device is a DS18S20 family device.\n");
+  }
+  else if ( addr[0] == 0x28) {
+      Serial.print("Device is a DS18B20 family device.\n");
+  }
+  else {
+      Serial.print("Device family is not recognized: 0x");
+      Serial.println(addr[0],HEX);
+      return;
+  }
+*/
+  ds.reset();
+  ds.select(addr);
+  ds.write(0x44,1);         // start conversion, with parasite power on at the end
+
+  delay(1000);     // maybe 750ms is enough, maybe not
+  // we might do a ds.depower() here, but the reset will take care of it.
+
+  present = ds.reset();
+  ds.select(addr);    
+  ds.write(0xBE);         // Read Scratchpad
+
+  Serial.print("P=");
+  Serial.print(present,HEX);
+  Serial.print(" ");
+  for ( i = 0; i < 9; i++) {           // we need 9 bytes
+    data[i] = ds.read();
+    Serial.print(data[i], HEX);
+    Serial.print(" ");
+  }
+  Serial.print(" CRC=");
+  Serial.print( OneWire::crc8( data, 8), HEX);
+  Serial.println();
+
+
 }
 
 //
@@ -1030,3 +1123,10 @@ void _DS1302_togglewrite( uint8_t data, uint8_t release)
     }
   }
 }
+
+//
+// Key decoder routines
+//
+// Keyboard is connected to analog input with a voltage devider
+//
+
