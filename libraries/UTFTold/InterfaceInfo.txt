@@ -1,0 +1,22 @@
+This looks like a kind of pin-mapping for the connection of the TFT.
+As i saw in the datasheet you need 2 power sources ?, and the whole thing is driven bei SPI.
+
+Quote
+
+
+    SDO: Serial clock output
+    LED: 3.4V Power Supply pin
+    SCL: Serial clock input
+    SDA / SDI: Serial data input
+    DC: Data / Command selection
+    RST: Reset, Low level active
+    CS: Chip Selection, Low level active
+    GND: Ground
+    VDD33: 3.3V Power Supply pin
+    UTFT Support
+
+
+
+GND & Vcc is for the circuit, LED is power for led.
+
+Did you connect RESET and is this HIGH or LOW ?
