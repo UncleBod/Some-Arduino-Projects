@@ -7,6 +7,18 @@
 // other libraries are too big for me.
 // Need to find out why the problem comes.
 // 
+// 2014-12-26
+// Trying to use SD card again. Logging every 5 minutes.
+//
+//
+// 2014-12-16
+// RTC and TFT doesn't like to share pins.
+// Is it TFT library that hates it?
+// Everything works until I use the RTC,
+// Move the RTC data pin and hope for the best...
+// RTC DQ at D0 now. This means that RTC and Serial monitor can't be used at the same time.
+// Now to find a good pin for the last sensor...
+
 // 2014-11-17
 // Update pins for future.
 // Old  New
@@ -56,6 +68,13 @@ dht11 DHT11;
 
 #define DHT11PIN 9
 //#define DHT11PIN 6
+
+// RTC Setup
+// I want to use the same data pin as the TFT (4), but that doesn't work!
+//
+#define DS1302_SCLK_PIN   3 // 2 // Arduino pin for the Serial Clock
+#define DS1302_IO_PIN     0 // 3 // Arduino pin for the Data I/O
+#define DS1302_CE_PIN     2 // 4 // Arduino pin for the Chip Enable
 
 // DS18B20 init
 // DS18S20 Temperature chip i/o
@@ -158,8 +177,8 @@ int curDisplayMode=0, newDisplayMode=0;
 
 // Variables for logging
 unsigned long NextLogging;
-// Exprimental - Time in ms between loggings (15 seconds now)
-const unsigned long PROGMEM MillisToNextLog = 1000UL*15UL;
+// Exprimental - Time in ms between loggings (5 minutes now)
+const unsigned long PROGMEM MillisToNextLog = 1000UL*5UL*60UL;
 int fcount;
 
 // Defines for RTC
@@ -167,11 +186,6 @@ int fcount;
 // Set your own pins with these defines !
 // A wild cutnpaste from arduino.cc user "Krodal"
 //
-// TODO 4 is shared pin, have to remake!
-//
-#define DS1302_SCLK_PIN   3 // 2 // Arduino pin for the Serial Clock
-#define DS1302_IO_PIN     4 // 3 // Arduino pin for the Data I/O
-#define DS1302_CE_PIN     2 // 4 // Arduino pin for the Chip Enable
 
 
 // Macros to convert the bcd values of the registers to normal
@@ -338,7 +352,7 @@ void setup()
   }
   myGLCD.print("Checking SDCard",CENTER,ypos);
   ypos += 12;
-  SDCard = false;
+  SDCard = true;
   if (SDCard)
   {
     // 1 below is quarter speed. With only resistors to get the level conversion, better is not possible
@@ -476,7 +490,7 @@ void loop()
 }
 
 //
-// Read temp adn humidity, set max and min values if changed
+// Read temp and humidity, set max and min values if changed
 // 
 void DHTUpdate()
 {
@@ -682,11 +696,13 @@ void DisplayClock()
 {
   ds1302_struct rtc;
   char buffer[80];     // the code uses 70 characters.
-
+  
   // Read all clock data at once (burst mode).
   DS1302_clock_burst_read( (uint8_t *) &rtc);
-
+  _DS1302_stop();
   
+  // Write info
+  myGLCD.setFont(SmallFont);
   myGLCD.print("Time and date",CENTER,12);
   myGLCD.setFont(SevenSegNumFont);
   
@@ -820,13 +836,34 @@ void writeFile()
 
 void writeValues()
 {
+    ds1302_struct rtc;
+    char buffer[80];     // the code uses 70 characters.
+  
+    // Read all clock data at once (burst mode).
+    DS1302_clock_burst_read( (uint8_t *) &rtc);
+    _DS1302_stop();
+  
     // print current data
     file.print(fcount++, DEC);
     file.print(",");
+    file.print(bcd2bin( rtc.Year10, rtc.Year), DEC);
+    file.print(",");
+    file.print(bcd2bin( rtc.Month10, rtc.Month), DEC);
+    file.print(",");
+    file.print(bcd2bin( rtc.Date10, rtc.Date), DEC);
+    file.print(",");
+    file.print(bcd2bin( rtc.h24.Hour10, rtc.h24.Hour), DEC);
+    file.print(",");
+    file.print(bcd2bin( rtc.Minutes10, rtc.Minutes), DEC);
+    file.print(",");
+    file.print(bcd2bin( rtc.Seconds10, rtc.Seconds), DEC);
+    file.print(",");
+    
     file.print(DHTcurrentHumid, DEC);
     file.print(",");
     file.print((int)DHTcurrentTemp, DEC);
-    file.print(",");
+    
+    /*file.print(",");
     file.print(file.curPosition(),DEC);
     file.print(",");
     file.print(file.fileSize(),DEC);
@@ -834,7 +871,9 @@ void writeValues()
     if (file.fileSize() > maxFile) maxFile=file.fileSize();
     file.print(maxFile,DEC);
     file.print(",");
-    file.println(millis());
+    file.print(millis());*/
+    
+    file.println("");
     file.sync();
     // Wait 50 ms to give the ststem time to write...
     delay(50);
