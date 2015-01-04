@@ -6,7 +6,16 @@
 // Fat16 library seems to mess up the card when opening/writing.
 // other libraries are too big for me.
 // Need to find out why the problem comes.
+// Currently problem "solved" by writing every 5 minutes
+// Check the drawline function. It seems to take a lot of flash (approx 2k)
+//
+// 2015-01-03
+// Rewriting code by removing floats
 // 
+// 2014-12-30
+// Everything but hte keys are working.
+// Might have to make the DS18x20 a bit less exact to speed things up. 750ms is a long time to delay in a key waiting loop
+//
 // 2014-12-26
 // Trying to use SD card again. Logging every 5 minutes.
 //
@@ -82,7 +91,7 @@ OneWire ds(1);// on pin 1
 
 // For monitoring the Vin
 int sensorValue;
-float vin;
+int vin;
 
 // For gliding mean
 #define DMaxBuf 8
@@ -158,7 +167,11 @@ byte currLogg;
 
 
 // Variables needed to read and show temperature values
-float DHTcurrentTemp;
+//Rewriting code without floats...
+// float DHTcurrentTemp;
+//float DScurrentTemp;
+int DHTcurrentTemp;
+int DScurrentTemp;
 int DHTcurrentHumid;
 
 // Variables used for SDCard
@@ -184,7 +197,7 @@ int fcount;
 // Defines for RTC
 // TODO Most of this should be in a header file.
 // Set your own pins with these defines !
-// A wild cutnpaste from arduino.cc user "Krodal"
+// A wild cut-n-paste from arduino.cc user "Krodal"
 //
 
 
@@ -410,7 +423,7 @@ void loop()
   DHTUpdate();
   // A7 is 1/11th of the Vin
   sensorValue = analogRead(A7);            
-  vin=1.1/1024*sensorValue*11.0;
+  vin=sensorValue; //1.1/1024*sensorValue*11;
 
   // check if it is time to write to SD card
   if (SDCard)
@@ -423,46 +436,54 @@ void loop()
   }
   DisplayInfo();
   newDisplayMode = curDisplayMode + 1;
-  if (newDisplayMode > 4) newDisplayMode = 0;
+  if (newDisplayMode > 5) newDisplayMode = 0;
   delay(2000);
+}
 
+//
+// For DS18x20
+//
 
-
+void showDS18x20()
+{
 // For testing size needed for DS18B20
   byte i;
+  byte type_s;
   byte present = 0;
   byte data[12];
   byte addr[8];
+  int ypos=0;
+  int celsius;
 
   if ( !ds.search(addr)) {
-      Serial.print("No more addresses.\n");
+//      myGLCD.print("SDCard initiated",CENTER,ypos);
+      myGLCD.print("No unit found.\n",LEFT,ypos);
+      ypos += 12;
       ds.reset_search();
       return;
   }
 
-  Serial.print("R=");
-  for( i = 0; i < 8; i++) {
-    Serial.print(addr[i], HEX);
-    Serial.print(" ");
-  }
 
   if ( OneWire::crc8( addr, 7) != addr[7]) {
-      Serial.print("CRC is not valid!\n");
+      myGLCD.print("CRC is not valid!\n",LEFT,ypos);
       return;
   }
-/*
+
   if ( addr[0] == 0x10) {
-      Serial.print("Device is a DS18S20 family device.\n");
+      myGLCD.print("Device is a DS18S20",LEFT,ypos);
+      type_s = 1;
+
   }
   else if ( addr[0] == 0x28) {
-      Serial.print("Device is a DS18B20 family device.\n");
+      myGLCD.print("Device is a DS18B20",LEFT,ypos);
+      type_s = 0;
   }
   else {
-      Serial.print("Device family is not recognized: 0x");
-      Serial.println(addr[0],HEX);
+      myGLCD.print("Device is not recognized",LEFT,ypos);
       return;
   }
-*/
+  ypos += 12;
+
   ds.reset();
   ds.select(addr);
   ds.write(0x44,1);         // start conversion, with parasite power on at the end
@@ -474,18 +495,31 @@ void loop()
   ds.select(addr);    
   ds.write(0xBE);         // Read Scratchpad
 
-  Serial.print("P=");
-  Serial.print(present,HEX);
-  Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds.read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
   }
-  Serial.print(" CRC=");
-  Serial.print( OneWire::crc8( data, 8), HEX);
-  Serial.println();
-
+  // Convert the data to actual temperature
+  // because the result is a 16 bit signed integer, it should
+  // be stored to an "int16_t" type, which is always 16 bits
+  // even when compiled on a 32 bit processor.
+  int16_t raw = (data[1] << 8) | data[0];
+  if (type_s) {
+    raw = raw << 3; // 9 bit resolution default
+    if (data[7] == 0x10) {
+      // "count remain" gives full 12 bit resolution
+      raw = (raw & 0xFFF0) + 12 - data[6];
+    }
+  } else {
+    byte cfg = (data[4] & 0x60);
+    // at lower res, the low bits are undefined, so let's zero them
+    if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+    else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+    else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+    //// default is 12 bit resolution, 750 ms conversion time
+  }
+  celsius = 100 * raw / 16;
+  myGLCD.printNumI(celsius,LEFT,ypos);
+  DScurrentTemp = celsius;
 
 }
 
@@ -496,7 +530,7 @@ void DHTUpdate()
 {
   int currentTemp;
   int temp=0;
-  float meanTemp;
+  int meanTemp;
   int chk = DHT11.read(DHT11PIN);
   if (chk==DHTLIB_OK)
   {
@@ -509,33 +543,33 @@ void DHTUpdate()
     {
        temp+=(int)tempbuf[i];
     }
-    meanTemp=(float)temp/(float)DMaxBuf;
+    meanTemp=(10 * temp)/DMaxBuf;
     if (buffull)
     {
       DHTcurrentTemp=meanTemp;
     }
     else
     {
-      DHTcurrentTemp=(float)currentTemp;
+      DHTcurrentTemp=10 * currentTemp;
     }
     
     //Setup max/min values
-    if (DHTcurrentTemp < minDHTTemp)
+    if ((DHTcurrentTemp/10) < minDHTTemp)
     {
-      minDHTTemp = (byte)DHTcurrentTemp;
+      minDHTTemp = (byte)(DHTcurrentTemp/10);
     }
-    if (DHTcurrentTemp < EEminDHTTemp)
+    if ((DHTcurrentTemp/10) < EEminDHTTemp)
     {
-      EEminDHTTemp = (byte)DHTcurrentTemp;
+      EEminDHTTemp = (byte)(DHTcurrentTemp/10);
       EEPROM.write(EEminDHTTempAdress,EEminDHTTemp);
     }
-    if (DHTcurrentTemp > maxDHTTemp)
+    if ((DHTcurrentTemp/10) > maxDHTTemp)
     {
-      maxDHTTemp = (byte)DHTcurrentTemp;
+      maxDHTTemp = (byte)(DHTcurrentTemp/10);
     }
-    if (DHTcurrentTemp > EEmaxDHTTemp)
+    if ((DHTcurrentTemp/10) > EEmaxDHTTemp)
     {
-      EEmaxDHTTemp = (byte)DHTcurrentTemp;
+      EEmaxDHTTemp = (byte)(DHTcurrentTemp/10);
       EEPROM.write(EEmaxDHTTempAdress,EEmaxDHTTemp);
     }
     if (DHTcurrentHumid < minDHTHumid)
@@ -587,7 +621,11 @@ void DisplayInfo()
     case 4:
       DisplayClock();
       break;
+    case 5:
+      showDS18x20();
+      break;
   }
+// showDS18x20();
 }
 
 // Display current values
@@ -598,20 +636,20 @@ void DispalyCurrent()
   myGLCD.print("Current Values",CENTER,12);
   // Humidity from DHT
   myGLCD.setFont(SevenSegNumFont);
-  myGLCD.printNumI((float)DHTcurrentHumid,RIGHT,24);
+  myGLCD.printNumI(DHTcurrentHumid,RIGHT,24);
   
   // Temperature from DHT
   if (buffull)
   {
-    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
-    decimal=(10*DHTcurrentTemp-10*int(DHTcurrentTemp));
+    myGLCD.printNumI((DHTcurrentTemp/10),80,74);
+    decimal=(DHTcurrentTemp%10);
     //myGLCD.setFont(BigFont);
     myGLCD.setFont(SmallFont);
-    myGLCD.printNumI((float)decimal,RIGHT,74);
+    myGLCD.printNumI(decimal,RIGHT,74);
   }
   else
   {
-    myGLCD.printNumI((float)DHTcurrentTemp,80,74);
+    myGLCD.printNumI((DHTcurrentTemp/10),80,74);
   }
 }
 
@@ -623,14 +661,14 @@ void DisplayMin()
   myGLCD.setFont(SevenSegNumFont);
   
   // Min humidity from DHT
-  myGLCD.printNumI((float)minDHTHumid,RIGHT,24);
+  myGLCD.printNumI(minDHTHumid,RIGHT,24);
   // Min temperature from DHT
-  myGLCD.printNumI((float)minDHTTemp,RIGHT,74);
+  myGLCD.printNumI(minDHTTemp,RIGHT,74);
   
   // Min humidity from EE
-  myGLCD.printNumI((float)EEminDHTHumid,LEFT,24);
+  myGLCD.printNumI(EEminDHTHumid,LEFT,24);
   // Min temperature from EE
-  myGLCD.printNumI((float)EEminDHTTemp,LEFT,74);
+  myGLCD.printNumI(EEminDHTTemp,LEFT,74);
   
   myGLCD.setFont(SmallFont);
 }
@@ -643,19 +681,20 @@ void DisplayMax()
   myGLCD.setFont(SevenSegNumFont);
   
   // Max humidity from DHT
-  myGLCD.printNumI((float)maxDHTHumid,RIGHT,24);
+  myGLCD.printNumI(maxDHTHumid,RIGHT,24);
   // Max temperature from DHT
-  myGLCD.printNumI((float)maxDHTTemp,RIGHT,74);
+  myGLCD.printNumI(maxDHTTemp,RIGHT,74);
   
   // Max humidity from EE
-  myGLCD.printNumI((float)EEmaxDHTHumid,LEFT,24);
+  myGLCD.printNumI(EEmaxDHTHumid,LEFT,24);
   // Max temperature from EE
-  myGLCD.printNumI((float)EEmaxDHTTemp,LEFT,74);
+  myGLCD.printNumI(EEmaxDHTTemp,LEFT,74);
 
   myGLCD.setFont(SmallFont);
 }
 
 // Display Graph
+// need a rewrite. Probably is it drawline that takes approx 2k of flash.
 void DisplayGraph()
 {
 
@@ -683,7 +722,7 @@ void DisplayGraph()
       myGLCD.drawPixel(x,buf[x-1]);
     }
     myGLCD.setColor(0,25,25);
-    y=63+(sin(((i*2.5)*3.14)/180)*(40-(i / 100)));
+    y=i; //63+(sin(((i*2.5)*3.14)/180)*(40-(i / 100)));
     myGLCD.drawPixel(x,y);
     buf[x-1]=y;
   }
@@ -707,14 +746,14 @@ void DisplayClock()
   myGLCD.setFont(SevenSegNumFont);
   
   // Hour min second
-  myGLCD.printNumI((float)bcd2bin( rtc.h24.Hour10, rtc.h24.Hour),LEFT,24);
-  myGLCD.printNumI((float)bcd2bin( rtc.Minutes10, rtc.Minutes),RIGHT,24);
+  myGLCD.printNumI(bcd2bin( rtc.h24.Hour10, rtc.h24.Hour),LEFT,24);
+  myGLCD.printNumI(bcd2bin( rtc.Minutes10, rtc.Minutes),RIGHT,24);
   //myGLCD.printNumI((float)bcd2bin( rtc.Seconds10, rtc.Seconds),RIGHT,24);
 
   // Year Month Day
   // myGLCD.printNumI((float)bcd2bin( rtc.Year10, rtc.Year),LEFT,74);
-  myGLCD.printNumI((float)bcd2bin( rtc.Month10, rtc.Month),LEFT,74);
-  myGLCD.printNumI((float)bcd2bin( rtc.Date10, rtc.Date),RIGHT,74);
+  myGLCD.printNumI(bcd2bin( rtc.Month10, rtc.Month),LEFT,74);
+  myGLCD.printNumI(bcd2bin( rtc.Date10, rtc.Date),RIGHT,74);
 
   myGLCD.setFont(SmallFont);
 }
@@ -742,7 +781,7 @@ void myClearScreen()
   myGLCD.setFont(SmallFont);
   myGLCD.fillScr(224, 224, 224);
   //myGLCD.print("NAD Weather Station",CENTER,0);
-  myGLCD.printNumF((float)vin,2,CENTER,0);
+  myGLCD.printNumI(vin,CENTER,0);
 }
 
 
@@ -863,6 +902,8 @@ void writeValues()
     file.print(",");
     file.print((int)DHTcurrentTemp, DEC);
     
+    file.print(",");
+    file.print(DScurrentTemp,DEC);
     /*file.print(",");
     file.print(file.curPosition(),DEC);
     file.print(",");
